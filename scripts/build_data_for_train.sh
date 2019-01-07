@@ -2,10 +2,8 @@
 
 export PYTHONPATH=`pwd`
 
-python data_for_train/create_dataset.py \
-preprocess/output/preprocessed_data.csv \
-we/output/vocab.txt \
---npz_dir=data_for_train/output/ \
---max_length=100 \
---dataset_size=10000
-
+python data_for_train/create_omniglot_dataset.py \
+--data_dir=/dataset/omniglot/python/images_background/train \
+--npz_dir=data_for_train/output/omniglot/ \
+--dataset_size=50000 \
+--name=eval

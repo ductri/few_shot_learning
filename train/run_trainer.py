@@ -8,6 +8,7 @@ from naruto_skills.text_transformer import TextTransformer
 from naruto_skills.trainer import Trainer
 
 from model_def.snn1 import SNN1
+from model_def.snn2 import SNN2
 
 
 if __name__ == '__main__':
@@ -25,6 +26,7 @@ if __name__ == '__main__':
     parser.add_argument('--run_type', type=str, help='Path to pre-trained word embedding', default='NORMAL')
     parser.add_argument('--continuous_training_config', type=str, help='Path to config file', default='NORMAL')
     parser.add_argument('--num_classes', type=int, help='Number of classes', default=-1)
+    parser.add_argument('--gpu_fraction', type=float, help='GPU memory fraction', default=0.3)
     args = parser.parse_args()
     logging.info('All params')
     logging.info(args)
@@ -36,15 +38,22 @@ if __name__ == '__main__':
         text_transformer = TextTransformer.get_instance(args.vocab)
 
         def my_scoring_func(y_true, y_pred):
-            beta = 0.5
-            return fbeta_score(y_pred=y_pred, y_true=y_true, beta=beta)
+            beta = 1.
+            return fbeta_score(y_pred=y_pred, y_true=y_true, beta=beta, average='binary')
         scoring_func = my_scoring_func
         model = SNN1(text_transformer=text_transformer, we_weights_path=args.word_embedding_npy)
         transform_pred_ = None
+    elif args.model_type == 'SNN2':
+            def my_scoring_func(y_true, y_pred):
+                beta = 1.
+                return fbeta_score(y_pred=y_pred, y_true=y_true, beta=beta, average='binary')
+            scoring_func = my_scoring_func
+            model = SNN2(105, 105)
+            transform_pred_ = None
     else:
         raise Exception('Mode type is invalid')
 
     trainer = Trainer()
     current_dir = os.path.dirname(os.path.realpath(__file__))
     trainer.run_train(model, args.dataset_file, args.batch_size, args.num_epochs, args.eval_interval, current_dir,
-                      transform_pred_=transform_pred_, scoring_func=scoring_func)
+                      transform_pred_=transform_pred_, scoring_func=scoring_func, gpu_fraction=args.gpu_fraction)
