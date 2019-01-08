@@ -21,12 +21,12 @@ class SNN2:
         with self.graph.as_default():
             self.tf_X, self.tf_y = ingradient.build_input_4(height, width)
 
-            tf_logits = ingradient.inference_snn_2(tf_X=self.tf_X)
+            tf_logits = ingradient.inference_snn_4(tf_X=self.tf_X)
 
             self.tf_prob = ingradient.build_predict_prob(tf_logits)
 
-            self.tf_predict = ingradient.build_predict_2(self.tf_prob, threshold=0.5)
-            print('tf_predict shape', self.tf_predict.shape)
+            self.tf_predict = ingradient.build_predict(self.tf_prob, threshold=0.5)
+            logging.info('tf_predict shape: %s', self.tf_predict.shape)
 
             self.tf_loss = ingradient.build_loss_v1(tf_logits=tf_logits, tf_y=self.tf_y)
 
@@ -72,3 +72,7 @@ class SNN2:
             os.mkdir(os.path.dirname(path_to_file))
         with open(path_to_file, 'wb') as output_file:
             pickle.dump(obj=self.params_dict, file=output_file, protocol=3)
+
+    @staticmethod
+    def scoring_func(y_true, y_pred):
+        pass

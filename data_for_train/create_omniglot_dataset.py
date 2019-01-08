@@ -10,9 +10,11 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 from naruto_skills.dataset import Dataset
+from preprocess import img_preprocessor
 
 
 def load_image_with_label(path_to_omniglot_dir):
+    logging.info('Loading data from files')
     images = []
     names = []
     list1 = os.listdir(path_to_omniglot_dir)
@@ -29,7 +31,7 @@ def load_image_with_label(path_to_omniglot_dir):
                 path_instance = os.path.join(path_character, instance_name)
                 image = Image.open(path_instance)
                 image = np.asarray(image).astype(np.float32)
-                image = image / image.std() - image.mean()
+                image = img_preprocessor.preprocess_img(image)
                 images.append(image)
                 names.append('/'.join(path_instance.split('/')[-3:]))
     df = pd.DataFrame({'image': images, 'name': names})
@@ -37,6 +39,7 @@ def load_image_with_label(path_to_omniglot_dir):
     df['character'] = df['name'].map(lambda x: x.split('/')[1])
     df['instance'] = df['name'].map(lambda x: x.split('/')[2])
     df['class'] = df['name'].map(lambda x: '/'.join(x.split('/')[:2]))
+    logging.info('Loading data from files: Done')
     return df
 
 
@@ -51,9 +54,15 @@ def create_pair_dataset(df, size):
     no_neg_per_class = [int(neg_size / num_classes)] * (num_classes - 1) + [int(neg_size / num_classes) + (neg_size % num_classes)]
     pos_data = []
     for class_name, no_samples in zip(list_classes, no_pos_per_class):
-        list1 = df[df['class'] == class_name]['image'].sample(no_samples, replace=True)
-        list2 = df[df['class'] == class_name]['image'].sample(no_samples, replace=True)
+        interesting_df = df[df['class'] == class_name]
+        list_instances = list(interesting_df['image'])
+
+        list1 = interesting_df['image'].sample(no_samples-len(list_instances), replace=True)
+        list2 = interesting_df['image'].sample(no_samples-len(list_instances), replace=True)
         pos_data.extend(list(zip(list1, list2)))
+
+        # Add identical pairs
+        pos_data.extend(list(zip(list_instances, list_instances)))
 
     neg_data = []
     for class_name, no_samples in zip(list_classes, no_neg_per_class):

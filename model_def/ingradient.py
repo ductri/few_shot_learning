@@ -215,41 +215,93 @@ def inference_snn_2(tf_X):
     tf_diff = tf.abs(tf.subtract(tf_encoding_1, tf_encoding_2))
     tf_logits = tf.layers.dense(tf_diff, units=1, kernel_regularizer=regularizer)
 
-    logging.info('tf_logits: %s', tf_logits)
+    logging.info('tf_logits shape: %s', tf_logits.shape)
     return tf_logits
 
 
 def inference_snn_3(tf_X):
     tf_X1 = tf.expand_dims(tf_X[:, 0], axis=-1)
     tf_X2 = tf.expand_dims(tf_X[:, 1], axis=-1)
-    regularizer = tf.contrib.layers.l2_regularizer(scale=0.00)
 
     def sharing_network(tf_projected_sens):
         with tf.variable_scope('sharing_network'):
+
             tf_inner = tf.layers.conv2d(inputs=tf_projected_sens, filters=64, kernel_size=(10, 10),
-                                        strides=(3, 3), activation=tf.nn.relu, padding='valid', name='0',
-                                        reuse=tf.AUTO_REUSE,
-                                        kernel_regularizer=regularizer)
-            tf_inner = tf.layers.conv2d(inputs=tf_inner, filters=64, kernel_size=(5, 1), strides=(3, 3),
-                                        activation=tf.nn.relu, padding='valid', name='1', reuse=tf.AUTO_REUSE,
-                                        kernel_regularizer=regularizer)
-            tf_inner = tf.layers.batch_normalization(tf_inner, name='2', reuse=tf.AUTO_REUSE)
+                                        strides=(1, 1), activation=tf.nn.relu, padding='valid',
+                                        reuse=tf.AUTO_REUSE, kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=2e-4), name='conv_0')
+            tf_inner = tf.layers.max_pooling2d(tf_inner, pool_size=(2, 2), strides=(2, 2), padding='valid',
+                                               name='max_pool_0')
 
-            tf_inner = tf.layers.max_pooling2d(inputs=tf_inner, pool_size=(3, 3), strides=(3, 3),
-                                               padding='valid', name='3')
-            tf_inner = tf.layers.batch_normalization(tf_inner, name='4', reuse=tf.AUTO_REUSE)
+            tf_inner = tf.layers.conv2d(inputs=tf_inner, filters=128, kernel_size=(7, 7), strides=(1, 1),
+                                        activation=tf.nn.relu, padding='valid', reuse=tf.AUTO_REUSE,
+                                        kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=2e-4), name='conv_1')
+            tf_inner = tf.layers.max_pooling2d(tf_inner, pool_size=(2, 2), strides=(2, 2), padding='valid',
+                                               name='max_pool_1')
 
-            tf_inner = tf.layers.flatten(tf_inner, name='5')
-            tf_inner = tf.layers.dense(tf_inner, units=1024, name='6', reuse=tf.AUTO_REUSE,
-                                       kernel_regularizer=regularizer)
+            tf_inner = tf.layers.conv2d(inputs=tf_inner, filters=128, kernel_size=(4, 4), strides=(1, 1),
+                                        activation=tf.nn.relu, padding='valid', reuse=tf.AUTO_REUSE,
+                                        kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=2e-4), name='conv_2')
+            tf_inner = tf.layers.max_pooling2d(tf_inner, pool_size=(2, 2), strides=(2, 2), padding='valid',
+                                               name='max_pool_2')
+
+            tf_inner = tf.layers.conv2d(inputs=tf_inner, filters=256, kernel_size=(4, 4), strides=(1, 1),
+                                        activation=tf.nn.relu, padding='valid', reuse=tf.AUTO_REUSE,
+                                        kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=2e-4), name='conv_3')
+            tf_inner = tf.layers.flatten(tf_inner, name='flatten')
+
+            tf_inner = tf.layers.dense(tf_inner, units=1024, name='dense', reuse=tf.AUTO_REUSE,
+                                       kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=1e-3))
             return tf_inner
 
     tf_encoding_1 = sharing_network(tf_X1)
     tf_encoding_2 = sharing_network(tf_X2)
-    tf_diff = tf.abs(tf.subtract(tf_encoding_1, tf_encoding_2))
-    tf_logits = tf.layers.dense(tf_diff, units=1, kernel_regularizer=regularizer)
+    tf_diff = tf.abs(tf_encoding_1 - tf_encoding_2)
+    tf_logits = tf.squeeze(tf.layers.dense(tf_diff, units=1, activation=tf.nn.sigmoid))
 
-    logging.debug('tf_logits: %s', tf_logits)
+    logging.info('tf_logits: %s', tf_logits)
+    return tf_logits
+
+
+def inference_snn_4(tf_X):
+    tf_X1 = tf.expand_dims(tf_X[:, 0], axis=-1)
+    tf_X2 = tf.expand_dims(tf_X[:, 1], axis=-1)
+
+    def sharing_network(tf_projected_sens):
+        with tf.variable_scope('sharing_network'):
+
+            tf_inner = tf.layers.conv2d(inputs=tf_projected_sens, filters=64, kernel_size=(10, 10),
+                                        strides=(1, 1), activation=tf.nn.relu, padding='valid',
+                                        reuse=tf.AUTO_REUSE, kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=2e-4), name='conv_0')
+            tf_inner = tf.layers.max_pooling2d(tf_inner, pool_size=(2, 2), strides=(2, 2), padding='valid',
+                                               name='max_pool_0')
+
+            tf_inner = tf.layers.conv2d(inputs=tf_inner, filters=128, kernel_size=(7, 7), strides=(1, 1),
+                                        activation=tf.nn.relu, padding='valid', reuse=tf.AUTO_REUSE,
+                                        kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=2e-4), name='conv_1')
+            tf_inner = tf.layers.max_pooling2d(tf_inner, pool_size=(2, 2), strides=(2, 2), padding='valid',
+                                               name='max_pool_1')
+
+            tf_inner = tf.layers.conv2d(inputs=tf_inner, filters=128, kernel_size=(4, 4), strides=(1, 1),
+                                        activation=tf.nn.relu, padding='valid', reuse=tf.AUTO_REUSE,
+                                        kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=2e-4), name='conv_2')
+            tf_inner = tf.layers.max_pooling2d(tf_inner, pool_size=(2, 2), strides=(2, 2), padding='valid',
+                                               name='max_pool_2')
+
+            tf_inner = tf.layers.conv2d(inputs=tf_inner, filters=256, kernel_size=(4, 4), strides=(1, 1),
+                                        activation=tf.nn.relu, padding='valid', reuse=tf.AUTO_REUSE,
+                                        kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=2e-4), name='conv_3')
+            tf_inner = tf.layers.flatten(tf_inner, name='flatten')
+
+            tf_inner = tf.layers.dense(tf_inner, units=1024, name='dense', reuse=tf.AUTO_REUSE,
+                                       kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=1e-3))
+            return tf_inner
+
+    tf_encoding_1 = sharing_network(tf_X1)
+    tf_encoding_2 = sharing_network(tf_X2)
+    tf_diff = tf.abs(tf_encoding_1 - tf_encoding_2)
+    tf_logits = tf.squeeze(tf.layers.dense(tf_diff, units=1))
+
+    logging.info('tf_logits: %s', tf_logits)
     return tf_logits
 
 

@@ -1,5 +1,5 @@
 #!/bin/bash
 
-docker logs -f --timestamps $(nvidia-docker run -d -e PYTHONIOENCODING=utf-8 \
+docker logs -f --timestamps $(docker run --runtime=nvidia -d -e PYTHONIOENCODING=utf-8 \
 -v `pwd`:/source \
-trind/full-item-gpu /bin/bash -c "/source/scripts/train_gpu.sh")
+trind/full-item-gpu /bin/bash -c "/source/scripts/train.sh")
